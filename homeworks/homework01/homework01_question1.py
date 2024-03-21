@@ -24,4 +24,3 @@ for v in m.getVars():
     print(f'{v.VarName} {v.x}')
 
 print(f"Obj: {m.objVal}")
-print('end')
