@@ -21,6 +21,7 @@ step_sizes = [
     0.0001,
     0.00001,
 ]
+MAX_ITERATION = 5000
 
 last_time_theta0 = 0
 last_time_theta1 = 0
@@ -56,13 +57,8 @@ thetas = []
 for step_size in step_sizes:
     theta0 = random.random()
     theta1 = random.random()
-    # theta0 = 0
-    # theta1 = 0
-    counter = 0
-    while True:
-        counter = counter + 1
-        if counter >= 5000:
-                break
+
+    for _ in range(MAX_ITERATION):
         accumulating_theta0 = 0
         accumulating_theta1 = 0
         for i in range(len(x)):
@@ -106,6 +102,7 @@ for i in range(len(thetas)):
 plt.scatter(x, y, marker='.', color='k')
 plt.axis([-2, 27, -7, 27])
 plt.legend(loc='lower right')
+plt.savefig('homework02_question4.png')
 plt.show()
 
 
