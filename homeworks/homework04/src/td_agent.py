@@ -14,32 +14,23 @@ class MCAgent:
         self.discount_factor = 0.9
         self.epsilon = 0.1  # epsilon-Greedy 정책
         self.samples = []  # 하나의 episode 동안의 기록을 저장하기 위한 버퍼/메모리
-        self.value_table = defaultdict(float)  # 가치함수를 저장하기 위한 버퍼
-
-    # 샘플 버퍼/메모리에 샘플을 추가
-    def save_sample(self, c_state, c_reward, n_state, n_reward, done):
-        self.samples.append([c_state, c_reward, n_state, n_reward, done])
+        self.value_table = defaultdict(float)  # 가치함수를 저장하기 위한 버퍼   
 
 
-    def td_update(self):
-        _sample = self.samples[-1]
-        current_state = str(_sample[0])
-        R = _sample[1]
-        next_state = str(_sample[2])        
-        
-        V = self.value_table[current_state]
-        V_next = self.value_table[next_state]
+    def td_update(self, sample):
         alpha = self.learning_rate
         gamma = self.discount_factor
+        current_state, R, next_state, done = sample        
+        
+        V = self.value_table[str(current_state)]
+        V_next = self.value_table[str(next_state)]        
         
         V_new = V + alpha * (R + gamma * V_next - V)
-        self.value_table[current_state] = V_new
-
-        is_done = _sample[4]
-        if is_done:
-            R_next = _sample[3]
-            V_next = V_next + alpha * (R_next - V_next)
-            self.value_table[next_state] = V_next
+        self.value_table[str(current_state)] = V_new
+        
+        if done:            
+            V_end = V_next + alpha * (R - V_next)
+            self.value_table[str(next_state)] = V_end
             
 
     # 상태-가치함수에 따라서 행동을 결정
@@ -54,8 +45,7 @@ class MCAgent:
         else:
             # exploit
             next_state = self.possible_next_state(state_)
-            action = self.arg_max(next_state)
-        
+            action = self.arg_max(next_state)        
         return action
 
     # 후보가 여럿이면 arg_max를 계산하고 무작위로 하나를 반환
@@ -108,24 +98,13 @@ if __name__ == "__main__":
 
     MAX_EPISODES = 1000  # 최대 에피소드 수
     for episode in range(MAX_EPISODES):
-        current_state = env.reset()  # 에피소드 시작 : 환경을 초기화하고, 상태 = 초기상태로 설정        
-        action = agent.get_action(current_state)            
-        current_state, current_reward, done = env.step(action)        
+        current_state = env.reset()  # 에피소드 시작 : 환경을 초기화하고, 상태 = 초기상태로 설정 
 
         while True:
-            action = agent.get_action(current_state)
-            
+            action = agent.get_action(current_state)            
             next_state, next_reward, done = env.step(action)
-
-            agent.save_sample(
-                current_state, current_reward,
-                next_state, next_reward, done)
-
-            current_state = next_state
-            current_reward = next_reward
-            agent.td_update()
-            
-            # 에피소드가 완료되었다면, 가치함수 업데이트
+            sample = [current_state, next_reward, next_state, done]            
+            agent.td_update(sample)
+            current_state = next_state            
             if done:                
-                agent.samples.clear()
                 break

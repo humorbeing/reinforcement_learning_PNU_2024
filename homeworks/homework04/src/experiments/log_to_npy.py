@@ -4,6 +4,8 @@ mc_every_path = 'logs/everyvisit.log'
 mc_first_path = 'logs/firstvisit.log'
 
 
+
+
 with open(td_path, 'r') as f:
     td_log = f.readlines()
 
@@ -65,4 +67,5 @@ fff = np.array(fmatrix)
 np.save('logs/td.npy', ttt)
 np.save('logs/every.npy', eee)
 np.save('logs/first.npy', fff)
+
 print("end")
