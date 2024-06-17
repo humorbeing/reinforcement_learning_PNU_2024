@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from collections import defaultdict
-from env import Env
+from env_exp import Env
 
 MAX_EPISODE = 1000
 
@@ -10,8 +10,9 @@ class SARSAgent:
         self.actions = actions
         self.learning_rate = 0.01
         self.discount_factor = 0.9
-        self.epsilon = 0.5  # 3) 시간이 지날수록 e 값이 감소하도록 코드를 수정하세요.
+        self.epsilon = 0.1  # 3) 시간이 지날수록 e 값이 감소하도록 코드를 수정하세요.
         self.q_table = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0])
+        self.current_epsilon = None
 
     # 큐함수 업데이트
     def learn(self, sample):
@@ -37,10 +38,15 @@ class SARSAgent:
     # 입실론 탐욕 정책에 따라서 행동을 반환
     def get_action(self, state, episode):
         x = (MAX_EPISODE - episode) / 1001
-        # epsilon = x
-        epsilon = x**3
-        # epsilon = 1/(1+ (x/(1-x))**(-3))
-        print(epsilon)
+        epsilon_max = 0.6
+        epsilon_min = 0.05
+        # y = x
+        # y = x**3
+        # y = 1/(1+ (x/(1-x))**(-3))
+        y = 1/(1+ (x/(1-x))**(-5))
+        epsilon = y * (epsilon_max - epsilon_min) + epsilon_min
+        # epsilon = self.epsilon
+        self.current_epsilon = epsilon
         if np.random.rand() < epsilon:
             # 무작위 행동 선택 (exploration)
             best_action = np.random.choice(self.actions)
@@ -83,42 +89,61 @@ class SARSAgent:
                 max_index_list.append(index)
         return random.choice(max_index_list)
 
+def get_return(rewards):
+    l = len(rewards)
+    ret = 0
+    gamma = 0.9
+    for i in range(l):
+        reverse_index = l-1-i
+        ret = rewards[reverse_index] + gamma * ret
+    return ret
 
+import logging
+logging.basicConfig(filename='logs/f4.log', level=logging.INFO, filemode='w')  # filemode='w'
+from tqdm import tqdm
 if __name__ == "__main__":
-    env = Env()  # 환경에 대한 instance 생성
-    agent = SARSAgent(actions=list(range(env.n_actions)))  # Sarsa Agent 객체 생성
-    
-    # 지정된 횟수(MAX_EPISODE)만큼 episode 진행
-    for episode in range(MAX_EPISODE):
-        # 게임 환경과 상태를 초기화 하고, 상태(state)값 얻기
-        state = env.reset()
-        
-        # 현재 상태에서 어떤 행동을 할지 선택
-        action = agent.get_action(str(state), episode)
-        
-        # 한개의 episode를 처음부터 끝까지 처리하는 while-loop
-        while True:
-            env.render()
-
-            """
-                1) 여기에 들어갈 내용을 구현하세요.
-            """
+    ROUND = 999
+    for r in tqdm(range(ROUND)):
+        env = Env()  # 환경에 대한 instance 생성
+        agent = SARSAgent(actions=list(range(env.n_actions)))  # Sarsa Agent 객체 생성
+        env.is_render = False
+        # 지정된 횟수(MAX_EPISODE)만큼 episode 진행
+        for episode in range(MAX_EPISODE):
+            # 게임 환경과 상태를 초기화 하고, 상태(state)값 얻기
+            state = env.reset()
+            rewards = []
+            # 현재 상태에서 어떤 행동을 할지 선택
+            action = agent.get_action(str(state), episode)
             
-            next_state, next_reward, done = env.step(action)
-            next_action = agent.get_action(str(next_state), episode)
-            sample = [state, action, next_reward,
-                      next_state, next_action, done]
-            
-            agent.learn(sample)
-            
-            state = next_state
-            action = next_action
+            # 한개의 episode를 처음부터 끝까지 처리하는 while-loop
+            while True:
+                env.render()
+
+                """
+                    1) 여기에 들어갈 내용을 구현하세요.
+                """
+                
+                next_state, next_reward, done = env.step(action)
+                next_action = agent.get_action(str(next_state), episode)
+                sample = [state, action, next_reward,
+                        next_state, next_action, done]
+                rewards.append(next_reward)
+                
+                agent.learn(sample)
+                
+                state = next_state
+                action = next_action
 
 
-            # 모든 큐함수 값을 화면에 표시
-            env.print_value_all(agent.q_table)
+                # 모든 큐함수 값을 화면에 표시
+                env.print_value_all(agent.q_table)
 
-            # episode가 끝났으면 while-loop을 종료
-            if done:
-                break
+                # episode가 끝났으면 while-loop을 종료
+                if done:
+                    ret = get_return(rewards)
+                    log_s = f'round |{r}| episode |{episode}| return |{ret}| epsilon |{agent.current_epsilon}|'
+                    # print(log_s)
+                    logging.info(log_s)
+                    break
+        env.destroy()
 
